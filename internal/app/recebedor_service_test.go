@@ -1,27 +1,30 @@
 package app
 
 import (
-	"context"
 	"testing"
 
 	"github.com/flaviorodolfo/transfeera-challenge/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 )
 
 type MockRepository struct {
 	mock.Mock
 }
 
-func (m *MockRepository) CriarRecebedor(ctx context.Context, recebedor *domain.Recebedor) error {
+func (m *MockRepository) CriarRecebedor(recebedor *domain.Recebedor) error {
 	args := m.Called(recebedor)
 	return args.Error(0)
 }
-
+func mockLogger() *zap.Logger {
+	logger, _ := zap.NewDevelopment()
+	return logger
+}
 func TestCreateUser_Success(t *testing.T) {
 
 	repo := new(MockRepository)
-	svc := &RecebedorService{repo: repo}
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
 	recebedor := &domain.Recebedor{
 		Id:           1,
 		CpfCnpj:      "515.762.030-69",
@@ -31,7 +34,7 @@ func TestCreateUser_Success(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
-	err := svc.CriarRecebedor(context.TODO(), recebedor)
+	err := svc.CriarRecebedor(recebedor)
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
 }
@@ -39,7 +42,7 @@ func TestCreateUser_Success(t *testing.T) {
 func TestCreateUser_SuccessChaveCnpj(t *testing.T) {
 
 	repo := new(MockRepository)
-	svc := &RecebedorService{repo: repo}
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
 	recebedor := &domain.Recebedor{
 		Id:           1,
 		CpfCnpj:      "515.762.030-69",
@@ -49,7 +52,7 @@ func TestCreateUser_SuccessChaveCnpj(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
-	err := svc.CriarRecebedor(context.TODO(), recebedor)
+	err := svc.CriarRecebedor(recebedor)
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
 }
@@ -57,7 +60,7 @@ func TestCreateUser_SuccessChaveCnpj(t *testing.T) {
 func TestCreateUser_EmailInvalido(t *testing.T) {
 
 	repo := new(MockRepository)
-	svc := &RecebedorService{repo: repo}
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
 	recebedor := &domain.Recebedor{
 		Id:           1,
 		CpfCnpj:      "515.762.030-69",
@@ -68,7 +71,7 @@ func TestCreateUser_EmailInvalido(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
-	err := svc.CriarRecebedor(context.TODO(), recebedor)
+	err := svc.CriarRecebedor(recebedor)
 	assert.EqualError(t, err, domain.ErrEmailInvalido.Error())
 
 }
@@ -76,7 +79,7 @@ func TestCreateUser_EmailInvalido(t *testing.T) {
 func TestCreateUser_CnpjInvalido(t *testing.T) {
 
 	repo := new(MockRepository)
-	svc := &RecebedorService{repo: repo}
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
 	recebedor := &domain.Recebedor{
 		Id:           1,
 		CpfCnpj:      "41.916.896/0002-30",
@@ -87,14 +90,14 @@ func TestCreateUser_CnpjInvalido(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
-	err := svc.CriarRecebedor(context.TODO(), recebedor)
+	err := svc.CriarRecebedor(recebedor)
 	assert.EqualError(t, err, domain.ErrCnpjInvalido.Error())
 
 }
 func TestCreateUser_ChavePixInvalida(t *testing.T) {
 
 	repo := new(MockRepository)
-	svc := &RecebedorService{repo: repo}
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
 	recebedor := &domain.Recebedor{
 		Id:           1,
 		CpfCnpj:      "41.916.896/0001-30",
@@ -105,7 +108,7 @@ func TestCreateUser_ChavePixInvalida(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
-	err := svc.CriarRecebedor(context.TODO(), recebedor)
+	err := svc.CriarRecebedor(recebedor)
 	assert.EqualError(t, err, domain.ErrChaveInvalida.Error())
 
 }
@@ -113,7 +116,7 @@ func TestCreateUser_ChavePixInvalida(t *testing.T) {
 func TestCreateUser_CpfInvalido(t *testing.T) {
 
 	repo := new(MockRepository)
-	svc := &RecebedorService{repo: repo}
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
 	recebedor := &domain.Recebedor{
 		Id:           1,
 		CpfCnpj:      "08122239522",
@@ -124,14 +127,14 @@ func TestCreateUser_CpfInvalido(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
-	err := svc.CriarRecebedor(context.TODO(), recebedor)
+	err := svc.CriarRecebedor(recebedor)
 	assert.EqualError(t, err, domain.ErrCpfInvalido.Error())
 
 }
 func TestCreateUser_TipoChaveTelefoneInvalida(t *testing.T) {
 
 	repo := new(MockRepository)
-	svc := &RecebedorService{repo: repo}
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
 	recebedor := &domain.Recebedor{
 		Id:           1,
 		CpfCnpj:      "41.916.896/0001-30",
@@ -142,7 +145,7 @@ func TestCreateUser_TipoChaveTelefoneInvalida(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
-	err := svc.CriarRecebedor(context.TODO(), recebedor)
+	err := svc.CriarRecebedor(recebedor)
 	assert.EqualError(t, err, domain.ErrChaveInvalida.Error())
 
 }
@@ -150,7 +153,7 @@ func TestCreateUser_TipoChaveTelefoneInvalida(t *testing.T) {
 func TestCreateUser_TipoChaveAleatoriaInvalida(t *testing.T) {
 
 	repo := new(MockRepository)
-	svc := &RecebedorService{repo: repo}
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
 	recebedor := &domain.Recebedor{
 		Id:           1,
 		CpfCnpj:      "41.916.896/0001-30",
@@ -161,7 +164,7 @@ func TestCreateUser_TipoChaveAleatoriaInvalida(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
-	err := svc.CriarRecebedor(context.TODO(), recebedor)
+	err := svc.CriarRecebedor(recebedor)
 	assert.EqualError(t, err, domain.ErrChaveInvalida.Error())
 
 }
@@ -169,7 +172,7 @@ func TestCreateUser_TipoChaveAleatoriaInvalida(t *testing.T) {
 func TestCreateUser_TipoChaveCnpjInvalida(t *testing.T) {
 
 	repo := new(MockRepository)
-	svc := &RecebedorService{repo: repo}
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
 	recebedor := &domain.Recebedor{
 		Id:           1,
 		CpfCnpj:      "41.916.896/0001-30",
@@ -180,7 +183,7 @@ func TestCreateUser_TipoChaveCnpjInvalida(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
-	err := svc.CriarRecebedor(context.TODO(), recebedor)
+	err := svc.CriarRecebedor(recebedor)
 	assert.EqualError(t, err, domain.ErrChaveInvalida.Error())
 
 }
