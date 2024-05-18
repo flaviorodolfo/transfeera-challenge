@@ -21,7 +21,7 @@ func mockLogger() *zap.Logger {
 	logger, _ := zap.NewDevelopment()
 	return logger
 }
-func TestCreateUser_Success(t *testing.T) {
+func TestCreateUserSuccess(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
@@ -39,7 +39,7 @@ func TestCreateUser_Success(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
-func TestCreateUser_SuccessChaveCnpj(t *testing.T) {
+func TestCreateUserSuccessChaveCnpj(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
@@ -57,7 +57,7 @@ func TestCreateUser_SuccessChaveCnpj(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
-func TestCreateUser_EmailInvalido(t *testing.T) {
+func TestCreateUserEmailInvalido(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
@@ -76,7 +76,7 @@ func TestCreateUser_EmailInvalido(t *testing.T) {
 
 }
 
-func TestCreateUser_CnpjInvalido(t *testing.T) {
+func TestCreateUserCnpjInvalido(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
@@ -94,7 +94,7 @@ func TestCreateUser_CnpjInvalido(t *testing.T) {
 	assert.EqualError(t, err, domain.ErrCnpjInvalido.Error())
 
 }
-func TestCreateUser_ChavePixInvalida(t *testing.T) {
+func TestCreateUserChavePixInvalida(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
@@ -113,7 +113,7 @@ func TestCreateUser_ChavePixInvalida(t *testing.T) {
 
 }
 
-func TestCreateUser_CpfInvalido(t *testing.T) {
+func TestCreateUserCpfInvalido(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
@@ -131,7 +131,7 @@ func TestCreateUser_CpfInvalido(t *testing.T) {
 	assert.EqualError(t, err, domain.ErrCpfInvalido.Error())
 
 }
-func TestCreateUser_TipoChaveTelefoneInvalida(t *testing.T) {
+func TestCreateUserTipoChaveTelefoneInvalida(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
@@ -150,7 +150,7 @@ func TestCreateUser_TipoChaveTelefoneInvalida(t *testing.T) {
 
 }
 
-func TestCreateUser_TipoChaveAleatoriaInvalida(t *testing.T) {
+func TestCreateUserTipoChaveAleatoriaInvalida(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
@@ -169,7 +169,7 @@ func TestCreateUser_TipoChaveAleatoriaInvalida(t *testing.T) {
 
 }
 
-func TestCreateUser_TipoChaveCnpjInvalida(t *testing.T) {
+func TestCreateUserTipoChaveCnpjInvalida(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
