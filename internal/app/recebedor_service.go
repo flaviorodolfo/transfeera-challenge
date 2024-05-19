@@ -49,7 +49,26 @@ func (s *RecebedorService) EditarRecebedor(recebedor *domain.Recebedor) error {
 		s.logger.Error("editando recebedor", zap.Error(err))
 		return err
 	}
-	s.logger.Info("Recebedor editado com sucesso", zap.Uint("recebedor_id", recebedor.Id))
+	s.logger.Info("recebedor editado com sucesso", zap.Uint("recebedor_id", recebedor.Id))
+	return nil
+}
+
+func (s *RecebedorService) EditarEmailRecebedor(id uint, email string) error {
+	_, err := s.repo.BuscarRecebedorPorId(id)
+	if !validator.ValidarEmail(email) {
+		s.logger.Info("email inválido", zap.String("email", email))
+		return domain.ErrEmailInvalido
+	}
+	if err != nil {
+		s.logger.Error("consultando recebedor", zap.Error(err))
+		return err
+	}
+	err = s.repo.EditarEmailRecebedor(id, email)
+	if err != nil {
+		s.logger.Error("atualizando email recebedor", zap.Error(err))
+		return err
+
+	}
 	return nil
 }
 

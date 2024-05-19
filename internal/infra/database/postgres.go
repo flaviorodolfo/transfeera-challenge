@@ -82,3 +82,12 @@ func (r *postgresRecebedorRepository) EditarRecebedor(recebedor *domain.Recebedo
 	}
 	return nil
 }
+
+func (r *postgresRecebedorRepository) EditarEmailRecebedor(id uint, email string) error {
+	query := "UPDATE pagamento.recebedores SET email = $1 WHERE recebedor_id = $2"
+	_, err := r.DB.Exec(query, email, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
