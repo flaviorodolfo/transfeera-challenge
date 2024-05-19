@@ -22,7 +22,7 @@ func construirDatabaseUri() string {
 func initializeDatabase(logger *zap.Logger) (*sql.DB, error) {
 	db, err := sql.Open("postgres", construirDatabaseUri())
 	if err != nil {
-		logger.Error("Erro ao abrir a conexão com o banco de dados", zap.Error(err))
+		logger.Error("Abrindo a conexão com o banco de dados", zap.Error(err))
 		return nil, err
 	}
 
