@@ -64,6 +64,7 @@ func (s *RecebedorService) EditarRecebedor(recebedor *domain.Recebedor) error {
 	s.logger.Info("recebedor editado com sucesso", zap.Uint("recebedor_id", recebedor.Id))
 	return nil
 }
+
 func (s *RecebedorService) buscarRecebedoresPorCampo(nome, nomeDoCampo string, pagina int) (*domain.PaginaRecebedores, error) {
 	totalRegistros, err := s.repo.ContarRecebedoresPorCampo(nome, nomeDoCampo)
 	if err != nil {
@@ -158,6 +159,27 @@ func (s *RecebedorService) BuscarRecebedorById(id uint) (*domain.Recebedor, erro
 
 }
 
+func (s *RecebedorService) DeletarRecebedor(id uint) error {
+	if _, err := s.BuscarRecebedorById(id); err != nil {
+		return err
+	}
+	err := s.repo.DeletarRecebedor(id)
+	if err != nil {
+		s.logger.Error("deletando recebedor", zap.Error(err))
+		return nil
+	}
+	return nil
+
+}
+func (s *RecebedorService) DeletarRecebedores(ids []uint) error {
+	err := s.repo.DeletarRecebedores(ids)
+	if err != nil {
+		s.logger.Error("deletando recebedores", zap.Error(err))
+		return nil
+	}
+	return nil
+
+}
 func validarUsuario(recebedor *domain.Recebedor) error {
 	if !isNomeValido(recebedor.Nome) {
 		return domain.ErrNomeInvalido

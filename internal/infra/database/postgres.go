@@ -49,6 +49,44 @@ func (r *postgresRecebedorRepository) ContarRecebedoresPorCampo(valor, nomeCampo
 	}
 	return totalRegistros, nil
 }
+func (r *postgresRecebedorRepository) DeletarRecebedor(id uint) error {
+	query := "DELETE FROM pagamento.recebedores WHERE recebedor_id = $1"
+	_, err := r.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *postgresRecebedorRepository) DeletarRecebedores(ids []uint) error {
+
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return err
+	}
+	query := "DELETE FROM pagamento.recebedores WHERE recebedor_id = $1"
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	defer stmt.Close()
+
+	for _, id := range ids {
+		_, err := stmt.Exec(id)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func (r *postgresRecebedorRepository) BuscarRecebedoresPorCampo(valor, nomeCampo string, offset int) ([]*domain.Recebedor, error) {
 	query := fmt.Sprintf("SELECT recebedor_id,cpf_cnpj, nome, tipo_chave_pix, chave_pix, status_recebedor, email FROM pagamento.recebedores WHERE %s = $1 LIMIT 10 OFFSET $2", nomeCampo)

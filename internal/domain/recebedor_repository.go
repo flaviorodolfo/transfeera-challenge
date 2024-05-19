@@ -7,4 +7,6 @@ type RecebedorRepository interface {
 	CriarRecebedor(recebedor *Recebedor) error
 	EditarRecebedor(recebedor *Recebedor) error
 	EditarEmailRecebedor(id uint, email string) error
+	DeletarRecebedores(ids []uint) error
+	DeletarRecebedor(id uint) error
 }
