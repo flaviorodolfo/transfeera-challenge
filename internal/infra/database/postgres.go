@@ -64,11 +64,6 @@ func (r *postgresRecebedorRepository) EditarRecebedor(recebedor *domain.Recebedo
 		values = append(values, recebedor.ChavePix)
 		index++
 	}
-	if recebedor.Status != "" {
-		query += fmt.Sprintf("status_recebedor = $%d, ", index)
-		values = append(values, recebedor.Status)
-		index++
-	}
 	if recebedor.Email != "" {
 		query += fmt.Sprintf("email = $%d, ", index)
 		values = append(values, recebedor.Email)
