@@ -12,7 +12,9 @@ func NewRouter(service *app.RecebedorService, logger *zap.Logger) *gin.Engine {
 	router.Use(ErrorHandler())
 	v1 := router.Group("/api/v1")
 	{
+		v1.GET("/recebedores/:id", handler.BuscarRecebedorPorId)
 		v1.POST("/recebedores", handler.CriarRecebedor)
+		v1.PATCH("/recebedores/:id", handler.EditarRecebedor)
 
 	}
 

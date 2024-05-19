@@ -31,6 +31,39 @@ func (s *RecebedorService) CriarRecebedor(recebedor *domain.Recebedor) error {
 	return nil
 }
 
+func (s *RecebedorService) EditarRecebedor(recebedor *domain.Recebedor, id uint) error {
+	oldRecebedor, err := s.BuscarRecebedorById(id)
+	if err != nil {
+		s.logger.Error("consultando recebedor", zap.Error(err))
+		return err
+	}
+	if oldRecebedor.Status == "Validado" {
+		return domain.ErrRecebedorNaoPermiteEdicao
+
+	}
+	if err := validarUsuario(recebedor); err != nil {
+		s.logger.Error("validando recebedor", zap.Error(err))
+		return err
+	}
+	recebedor.Id = id
+	if err := s.repo.EditarRecebedor(recebedor); err != nil {
+		s.logger.Error("editando recebedor", zap.Error(err))
+		return err
+	}
+	s.logger.Info("Recebedor editado com sucesso", zap.Uint("recebedor_id", id))
+	return nil
+}
+
+func (s *RecebedorService) BuscarRecebedorById(id uint) (*domain.Recebedor, error) {
+	recebedor, err := s.repo.BuscarRecebedorPorID(id)
+	if err != nil {
+		s.logger.Error("consultando recebedor", zap.Error(err))
+		return nil, err
+	}
+	return recebedor, nil
+
+}
+
 func validarUsuario(recebedor *domain.Recebedor) error {
 	if recebedor.Email != "" {
 		if !validator.ValidarEmail(recebedor.Email) {

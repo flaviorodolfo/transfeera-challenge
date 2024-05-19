@@ -17,6 +17,15 @@ func (m *MockRepository) CriarRecebedor(recebedor *domain.Recebedor) error {
 	args := m.Called(recebedor)
 	return args.Error(0)
 }
+func (m *MockRepository) BuscarRecebedorPorID(id uint) (*domain.Recebedor, error) {
+	args := m.Called(id)
+	return args.Get(0).(*domain.Recebedor), args.Error(1)
+}
+
+func (m *MockRepository) EditarRecebedor(recebedor *domain.Recebedor) error {
+	args := m.Called(recebedor)
+	return args.Error(0)
+}
 func mockLogger() *zap.Logger {
 	logger, _ := zap.NewDevelopment()
 	return logger

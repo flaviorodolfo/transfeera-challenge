@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/flaviorodolfo/transfeera-challenge/internal/app"
 	"github.com/flaviorodolfo/transfeera-challenge/internal/domain"
@@ -48,5 +49,51 @@ func (h *RecebedorHandler) CriarRecebedor(c *gin.Context) {
 		c.Error(err)
 		return
 	}
-	c.Status(http.StatusNoContent)
+	c.Status(http.StatusCreated)
+}
+
+func (h *RecebedorHandler) EditarRecebedor(c *gin.Context) {
+	var recebedor domain.Recebedor
+	if err := c.ShouldBindJSON(&recebedor); err != nil {
+		h.logger.Error("Binding json", zap.Error(err))
+		c.Error(err)
+		return
+	}
+	idStr := c.Param("id")
+	idTmp, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  http.StatusBadRequest,
+			"message": "id inválido",
+		})
+		return
+	}
+	var id = uint(idTmp)
+	err = h.service.EditarRecebedor(&recebedor, id)
+	if err != nil {
+		h.logger.Error("editando recebedor", zap.Error(err))
+		c.Error(err)
+		return
+	}
+	c.Status(http.StatusCreated)
+}
+
+func (h *RecebedorHandler) BuscarRecebedorPorId(c *gin.Context) {
+	idStr := c.Param("id")
+	idTmp, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  http.StatusBadRequest,
+			"message": "id inválido",
+		})
+		return
+	}
+	var id = uint(idTmp)
+	recebedor, err := h.service.BuscarRecebedorById(id)
+	if err != nil {
+		h.logger.Error("consultando recebedor", zap.Error(err))
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, recebedor)
 }
