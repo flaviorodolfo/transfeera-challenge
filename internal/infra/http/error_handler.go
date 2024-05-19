@@ -21,7 +21,7 @@ func ErrorHandler() gin.HandlerFunc {
 			var message string
 
 			switch err {
-			case domain.ErrEmailInvalido, domain.ErrCpfInvalido, domain.ErrCnpjInvalido, domain.ErrChaveInvalida:
+			case domain.ErrEmailInvalido, domain.ErrCpfInvalido, domain.ErrCnpjInvalido, domain.ErrNomeInvalido, domain.ErrTipoChaveInvalida, domain.ErrChaveInvalida:
 				status = http.StatusBadRequest
 				message = err.Error()
 			case domain.ErrRecebedorNaoEncontrado:

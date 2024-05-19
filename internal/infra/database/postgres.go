@@ -40,6 +40,40 @@ func (r *postgresRecebedorRepository) BuscarRecebedorPorId(id uint) (*domain.Rec
 	return &recebedor, nil
 }
 
+func (r *postgresRecebedorRepository) ContarRecebedoresPorCampo(valor, nomeCampo string) (int, error) {
+	query := fmt.Sprintf("SELECT COUNT(recebedor_id) FROM pagamento.recebedores WHERE %s = $1", nomeCampo)
+	var totalRegistros int
+	err := r.DB.QueryRow(query, valor).Scan(&totalRegistros)
+	if err != nil {
+		return 0, err
+	}
+	return totalRegistros, nil
+}
+
+func (r *postgresRecebedorRepository) BuscarRecebedoresPorCampo(valor, nomeCampo string, offset int) ([]*domain.Recebedor, error) {
+	query := fmt.Sprintf("SELECT recebedor_id,cpf_cnpj, nome, tipo_chave_pix, chave_pix, status_recebedor, email FROM pagamento.recebedores WHERE %s = $1 LIMIT 10 OFFSET $2", nomeCampo)
+	rows, err := r.DB.Query(query, valor, offset)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, domain.ErrRecebedorNaoEncontrado
+		}
+		return nil, err
+	}
+	recebedores := []*domain.Recebedor{}
+	for rows.Next() {
+		var recebedor domain.Recebedor
+		if err := rows.Scan(&recebedor.Id, &recebedor.CpfCnpj, &recebedor.Nome, &recebedor.TipoChavePix, &recebedor.ChavePix, &recebedor.Status, &recebedor.Email); err != nil {
+			return nil, err
+		}
+		recebedores = append(recebedores, &recebedor)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return recebedores, nil
+}
+
 func (r *postgresRecebedorRepository) EditarRecebedor(recebedor *domain.Recebedor) error {
 	query := "UPDATE pagamento.recebedores SET "
 	values := []interface{}{}

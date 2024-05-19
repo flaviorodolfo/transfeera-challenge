@@ -10,6 +10,14 @@ const (
 	ChaveAleatoria TipoChavePix = "CHAVE_ALEATORIA"
 )
 
+type PaginaRecebedores struct {
+	Total        int          `json:"total"`
+	PorPagina    int          `json:"por_pagina"`
+	PaginaAtual  int          `json:"pagina_atual"`
+	TotalPaginas int          `json:"total_paginas"`
+	Recebedores  []*Recebedor `json:"recebedores"`
+}
+
 type Recebedor struct {
 	Id           uint         `json:"id" `
 	CpfCnpj      string       `json:"cpf_cnpj" validate:"required" `

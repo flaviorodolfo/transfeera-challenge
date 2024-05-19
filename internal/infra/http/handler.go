@@ -114,3 +114,67 @@ func (h *RecebedorHandler) BuscarRecebedorPorId(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, recebedor)
 }
+
+func (h *RecebedorHandler) BuscarRecebedorPorNome(c *gin.Context) {
+	nome := c.Param("nome")
+	pagina, err := strconv.Atoi(c.DefaultQuery("pagina", "1"))
+	if err != nil || pagina < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parâmetro de página inválido"})
+		return
+	}
+	recebedor, err := h.service.BuscarRecebedoresPorNome(nome, pagina)
+	if err != nil {
+		h.logger.Error("consultando recebedor", zap.Error(err))
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, recebedor)
+}
+
+func (h *RecebedorHandler) BuscarRecebedorPorStatus(c *gin.Context) {
+	status := c.Param("status")
+	pagina, err := strconv.Atoi(c.DefaultQuery("pagina", "1"))
+	if err != nil || pagina < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parâmetro de página inválido"})
+		return
+	}
+	recebedores, err := h.service.BuscarRecebedoresPorStatus(status, pagina)
+	if err != nil {
+		h.logger.Error("consultando recebedor", zap.Error(err))
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, recebedores)
+}
+
+func (h *RecebedorHandler) BuscarRecebedorPorChave(c *gin.Context) {
+	chave := c.Param("chave")
+	pagina, err := strconv.Atoi(c.DefaultQuery("pagina", "1"))
+	if err != nil || pagina < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parâmetro de página inválido"})
+		return
+	}
+	recebedores, err := h.service.BuscarRecebedoresPorChave(chave, pagina)
+	if err != nil {
+		h.logger.Error("consultando recebedor", zap.Error(err))
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, recebedores)
+}
+
+func (h *RecebedorHandler) BuscarRecebedorPorTipoChave(c *gin.Context) {
+	tipoChave := c.Param("tipoChave")
+	pagina, err := strconv.Atoi(c.DefaultQuery("pagina", "1"))
+	if err != nil || pagina < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parâmetro de página inválido"})
+		return
+	}
+	recebedores, err := h.service.BuscarRecebedoresPorTipoChavePix(tipoChave, pagina)
+	if err != nil {
+		h.logger.Error("consultando recebedor", zap.Error(err))
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, recebedores)
+}

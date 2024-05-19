@@ -1,9 +1,21 @@
 package app
 
 import (
+	"strings"
+
 	"github.com/flaviorodolfo/transfeera-challenge/internal/app/validator"
 	"github.com/flaviorodolfo/transfeera-challenge/internal/domain"
 	"go.uber.org/zap"
+)
+
+const (
+	campoNome         = "nome"
+	campoChavePix     = "chave_pix"
+	campoTipoChavePix = "tipo_chave_pix"
+	campoStatus       = "status_recebedor"
+	porPagina         = 10
+	statusValidando   = "Validando"
+	statusRascunho    = "Rascunho"
 )
 
 type RecebedorService struct {
@@ -52,13 +64,77 @@ func (s *RecebedorService) EditarRecebedor(recebedor *domain.Recebedor) error {
 	s.logger.Info("recebedor editado com sucesso", zap.Uint("recebedor_id", recebedor.Id))
 	return nil
 }
+func (s *RecebedorService) buscarRecebedoresPorCampo(nome, nomeDoCampo string, pagina int) (*domain.PaginaRecebedores, error) {
+	totalRegistros, err := s.repo.ContarRecebedoresPorCampo(nome, nomeDoCampo)
+	if err != nil {
+		s.logger.Error("consulta quantidade de registro de recebedores", zap.Error(err))
+		return nil, err
+	}
+	recebedores, err := s.repo.BuscarRecebedoresPorCampo(nome, nomeDoCampo, (pagina-1)*10)
+	if err != nil {
+		s.logger.Error("consulta de recebedores", zap.Error(err))
+		return nil, err
+	}
+	totalPaginas := totalRegistros / porPagina
+	if resto := totalRegistros % porPagina; resto != 0 {
+		totalPaginas++
+	}
+	return &domain.PaginaRecebedores{
+		Total:        totalRegistros,
+		PorPagina:    porPagina,
+		PaginaAtual:  pagina,
+		TotalPaginas: totalPaginas,
+		Recebedores:  recebedores,
+	}, nil
+}
+func (s *RecebedorService) BuscarRecebedoresPorNome(nome string, pagina int) (*domain.PaginaRecebedores, error) {
+	recebedores, err := s.buscarRecebedoresPorCampo(strings.ToLower(nome), campoNome, pagina)
+	if err != nil {
+		s.logger.Error("consulta de recebedores por nome", zap.Error(err))
+		return nil, err
+	}
+	return recebedores, nil
+}
 
+func (s *RecebedorService) BuscarRecebedoresPorStatus(status string, pagina int) (*domain.PaginaRecebedores, error) {
+
+	recebedores, err := s.buscarRecebedoresPorCampo(status, campoStatus, pagina)
+	if err != nil {
+		s.logger.Error("consulta de recebedores por status", zap.Error(err))
+		return nil, err
+	}
+	return recebedores, nil
+}
+func (s *RecebedorService) BuscarRecebedoresPorChave(chave string, pagina int) (*domain.PaginaRecebedores, error) {
+	if !isChavePixValida(chave) {
+		return nil, domain.ErrChaveInvalida
+	}
+	recebedores, err := s.buscarRecebedoresPorCampo(chave, campoChavePix, pagina)
+	if err != nil {
+		s.logger.Error("consulta de recebedores por chave", zap.Error(err))
+		return nil, err
+	}
+	return recebedores, nil
+}
+func (s *RecebedorService) BuscarRecebedoresPorTipoChavePix(tipoChave string, pagina int) (*domain.PaginaRecebedores, error) {
+	tp := domain.TipoChavePix(tipoChave)
+	if !isTipoChavePixValida(tp) {
+		return nil, domain.ErrTipoChaveInvalida
+	}
+	recebedores, err := s.buscarRecebedoresPorCampo(tipoChave, campoTipoChavePix, pagina)
+	if err != nil {
+		s.logger.Error("consulta de recebedores por tipo chave pix", zap.Error(err))
+		return nil, err
+	}
+	return recebedores, nil
+}
 func (s *RecebedorService) EditarEmailRecebedor(id uint, email string) error {
-	_, err := s.repo.BuscarRecebedorPorId(id)
+
 	if !validator.ValidarEmail(email) {
 		s.logger.Info("email inválido", zap.String("email", email))
 		return domain.ErrEmailInvalido
 	}
+	_, err := s.repo.BuscarRecebedorPorId(id)
 	if err != nil {
 		s.logger.Error("consultando recebedor", zap.Error(err))
 		return err
@@ -83,6 +159,9 @@ func (s *RecebedorService) BuscarRecebedorById(id uint) (*domain.Recebedor, erro
 }
 
 func validarUsuario(recebedor *domain.Recebedor) error {
+	if !isNomeValido(recebedor.Nome) {
+		return domain.ErrNomeInvalido
+	}
 	if recebedor.Email != "" {
 		if !validator.ValidarEmail(recebedor.Email) {
 			return domain.ErrEmailInvalido
@@ -91,9 +170,15 @@ func validarUsuario(recebedor *domain.Recebedor) error {
 	if err := validarCpfCnpj(recebedor.CpfCnpj); err != nil {
 		return err
 	}
-	if !isChavePixValida(recebedor.ChavePix, recebedor.TipoChavePix) {
+	if !isTipoChavePixValida(recebedor.TipoChavePix) {
+		return domain.ErrTipoChaveInvalida
+	}
+	if !isChavePixValida(recebedor.ChavePix) {
 		return domain.ErrChaveInvalida
 	}
+	//normalização do nome do usuário e email
+	recebedor.Email = strings.ToLower(recebedor.Email)
+	recebedor.Nome = strings.ToLower(recebedor.Nome)
 	return nil
 }
 
@@ -110,19 +195,24 @@ func validarCpfCnpj(cpfCnpj string) error {
 	}
 	return nil
 }
-
-func isChavePixValida(chave string, tipoChave domain.TipoChavePix) bool {
+func isNomeValido(nome string) bool {
+	return len(nome) > 2
+}
+func isChavePixValida(chave string) bool {
+	return validator.ValidarCPF(chave) || validator.ValidarCNPJ(chave) || validator.ValidarTelefone(chave) || validator.ValidarEmail(chave) || validator.ValidarChaveAleatoria(chave)
+}
+func isTipoChavePixValida(tipoChave domain.TipoChavePix) bool {
 	switch tipoChave {
 	case domain.Cpf:
-		return validator.ValidarCPF(chave)
+		return true
 	case domain.Cnpj:
-		return validator.ValidarCNPJ(chave)
+		return true
 	case domain.Telefone:
-		return validator.ValidarTelefone(chave)
+		return true
 	case domain.Email:
-		return validator.ValidarEmail(chave)
+		return true
 	case domain.ChaveAleatoria:
-		return validator.ValidarChaveAleatoria(chave)
+		return true
 	default:
 		return false
 	}
