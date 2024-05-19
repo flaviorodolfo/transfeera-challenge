@@ -59,17 +59,8 @@ func (h *RecebedorHandler) EditarRecebedor(c *gin.Context) {
 		c.Error(err)
 		return
 	}
-	idStr := c.Param("id")
-	idTmp, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  http.StatusBadRequest,
-			"message": "id inválido",
-		})
-		return
-	}
-	var id = uint(idTmp)
-	err = h.service.EditarRecebedor(&recebedor, id)
+
+	err := h.service.EditarRecebedor(&recebedor)
 	if err != nil {
 		h.logger.Error("editando recebedor", zap.Error(err))
 		c.Error(err)

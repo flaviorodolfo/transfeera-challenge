@@ -31,8 +31,8 @@ func (s *RecebedorService) CriarRecebedor(recebedor *domain.Recebedor) error {
 	return nil
 }
 
-func (s *RecebedorService) EditarRecebedor(recebedor *domain.Recebedor, id uint) error {
-	oldRecebedor, err := s.BuscarRecebedorById(id)
+func (s *RecebedorService) EditarRecebedor(recebedor *domain.Recebedor) error {
+	oldRecebedor, err := s.BuscarRecebedorById(recebedor.Id)
 	if err != nil {
 		s.logger.Error("consultando recebedor", zap.Error(err))
 		return err
@@ -45,12 +45,11 @@ func (s *RecebedorService) EditarRecebedor(recebedor *domain.Recebedor, id uint)
 		s.logger.Error("validando recebedor", zap.Error(err))
 		return err
 	}
-	recebedor.Id = id
 	if err := s.repo.EditarRecebedor(recebedor); err != nil {
 		s.logger.Error("editando recebedor", zap.Error(err))
 		return err
 	}
-	s.logger.Info("Recebedor editado com sucesso", zap.Uint("recebedor_id", id))
+	s.logger.Info("Recebedor editado com sucesso", zap.Uint("recebedor_id", recebedor.Id))
 	return nil
 }
 
