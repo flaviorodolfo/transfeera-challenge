@@ -54,7 +54,7 @@ func (s *RecebedorService) EditarRecebedor(recebedor *domain.Recebedor) error {
 }
 
 func (s *RecebedorService) BuscarRecebedorById(id uint) (*domain.Recebedor, error) {
-	recebedor, err := s.repo.BuscarRecebedorPorID(id)
+	recebedor, err := s.repo.BuscarRecebedorPorId(id)
 	if err != nil {
 		s.logger.Error("consultando recebedor", zap.Error(err))
 		return nil, err

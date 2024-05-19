@@ -26,14 +26,14 @@ func (r *postgresRecebedorRepository) CriarRecebedor(recebedor *domain.Recebedor
 	return nil
 }
 
-func (r *postgresRecebedorRepository) BuscarRecebedorPorID(id uint) (*domain.Recebedor, error) {
+func (r *postgresRecebedorRepository) BuscarRecebedorPorId(id uint) (*domain.Recebedor, error) {
 	query := "SELECT recebedor_id,cpf_cnpj, nome, tipo_chave_pix, chave_pix, status_recebedor, email FROM pagamento.recebedores WHERE recebedor_id = $1"
 
 	var recebedor domain.Recebedor
 	err := r.DB.QueryRow(query, id).Scan(&recebedor.Id, &recebedor.CpfCnpj, &recebedor.Nome, &recebedor.TipoChavePix, &recebedor.ChavePix, &recebedor.Status, &recebedor.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, domain.ErrRecebedorNaoEncontrato
+			return nil, domain.ErrRecebedorNaoEncontrado
 		}
 		return nil, err
 	}
