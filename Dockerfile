@@ -10,7 +10,7 @@ COPY . .
 # Construção estática
 RUN CGO_ENABLED=0 GOOS=linux go build -o /go/bin/api ./cmd/
 
-FROM alpine:latest
+FROM alpine:3.19
 
 
 RUN apk --no-cache add ca-certificates
