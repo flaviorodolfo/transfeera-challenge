@@ -1,6 +1,7 @@
 package app
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/flaviorodolfo/transfeera-challenge/internal/app/validator"
@@ -118,8 +119,8 @@ func (s *RecebedorService) BuscarRecebedoresPorChave(chave string, pagina int) (
 	return recebedores, nil
 }
 func (s *RecebedorService) BuscarRecebedoresPorTipoChavePix(tipoChave string, pagina int) (*domain.PaginaRecebedores, error) {
-	tp := domain.TipoChavePix(tipoChave)
-	if !isTipoChavePixValida(tp) {
+	tipo := domain.TipoChavePix(tipoChave)
+	if !isTipoValido(tipo) {
 		return nil, domain.ErrTipoChaveInvalida
 	}
 	recebedores, err := s.buscarRecebedoresPorCampo(tipoChave, campoTipoChavePix, pagina)
@@ -172,11 +173,24 @@ func (s *RecebedorService) DeletarRecebedor(id uint) error {
 
 }
 func (s *RecebedorService) DeletarRecebedores(ids []uint) error {
-	err := s.repo.DeletarRecebedores(ids)
-	if err != nil {
-		s.logger.Error("deletando recebedores", zap.Error(err))
-		return nil
+	var idsSemSucesso []uint
+	var idsComSucesso []uint
+	for _, id := range ids {
+		if err := s.DeletarRecebedor(id); err != nil {
+			idsSemSucesso = append(idsSemSucesso, id)
+		} else {
+			idsComSucesso = append(idsComSucesso, id)
+		}
 	}
+	if idsSemSucesso != nil {
+		return domain.ErrRecebedoresNaoDeletados{IdsComSucesso: idsComSucesso, IdsSemSucesso: idsSemSucesso}
+	}
+	//for
+	// err := s.repo.DeletarRecebedores(ids)
+	// if err != nil {
+	// 	s.logger.Error("deletando recebedores", zap.Error(err))
+	// 	return nil
+	// }
 	return nil
 
 }
@@ -192,27 +206,57 @@ func validarUsuario(recebedor *domain.Recebedor) error {
 	if err := validarCpfCnpj(recebedor.CpfCnpj); err != nil {
 		return err
 	}
-	if !isTipoChavePixValida(recebedor.TipoChavePix) {
+	if !isTipoValido(recebedor.TipoChavePix) {
 		return domain.ErrTipoChaveInvalida
 	}
 	if !isChavePixValida(recebedor.ChavePix) {
 		return domain.ErrChaveInvalida
 	}
-	//normalização do nome do usuário e email
-	recebedor.Email = strings.ToLower(recebedor.Email)
-	recebedor.Nome = strings.ToLower(recebedor.Nome)
+	if !isTipoChavePixValida(recebedor.ChavePix, recebedor.TipoChavePix) {
+		return domain.ErrChaveTipoNaoCorresponde
+	}
+	//normalização do nome do usuário e email e cpf/cnpj
+	normalizarCampos(recebedor)
 	return nil
 }
 
-func validarCpfCnpj(cpfCnpj string) error {
-	if len(cpfCnpj) < 15 {
+// Função para formatar CPF para o padrão XXX.XXX.XXX-XX
+func formatarCpf(cpf string) string {
+	re := regexp.MustCompile(`(\d{3})(\d{3})(\d{3})(\d{2})`)
+	return re.ReplaceAllString(cpf, "$1.$2.$3-$4")
+}
 
-		if !validator.ValidarCPF(cpfCnpj) {
-			return domain.ErrCpfInvalido
-		}
+// Função para formatar CNPJ para o padrão XX.XXX.XXX/XXXX-XX
+func formatarCnpj(cnpj string) string {
+	re := regexp.MustCompile(`(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})`)
+	return re.ReplaceAllString(cnpj, "$1.$2.$3/$4-$5")
+}
+func normalizarCampos(recebedor *domain.Recebedor) {
+	re := regexp.MustCompile(`[^\d]`)
+	recebedor.CpfCnpj = re.ReplaceAllString(recebedor.CpfCnpj, "")
+	if len(recebedor.CpfCnpj) > 11 {
+		recebedor.CpfCnpj = formatarCnpj(recebedor.CpfCnpj)
 	} else {
+		recebedor.CpfCnpj = formatarCpf(recebedor.CpfCnpj)
+	}
+	recebedor.Email = strings.ToLower(recebedor.Email)
+	recebedor.Nome = strings.ToLower(recebedor.Nome)
+	if recebedor.TipoChavePix == domain.Cpf {
+		recebedor.ChavePix = formatarCpf(re.ReplaceAllString(recebedor.ChavePix, ""))
+	} else if recebedor.TipoChavePix == domain.Cnpj {
+		recebedor.ChavePix = formatarCnpj(re.ReplaceAllString(recebedor.ChavePix, ""))
+	}
+}
+func validarCpfCnpj(cpfCnpj string) error {
+	cpfCnpj = regexp.MustCompile(`[^\d]`).ReplaceAllString(cpfCnpj, "")
+	if len(cpfCnpj) > 11 {
+
 		if !validator.ValidarCNPJ(cpfCnpj) {
 			return domain.ErrCnpjInvalido
+		}
+	} else {
+		if !validator.ValidarCPF(cpfCnpj) {
+			return domain.ErrCpfInvalido
 		}
 	}
 	return nil
@@ -223,7 +267,25 @@ func isNomeValido(nome string) bool {
 func isChavePixValida(chave string) bool {
 	return validator.ValidarCPF(chave) || validator.ValidarCNPJ(chave) || validator.ValidarTelefone(chave) || validator.ValidarEmail(chave) || validator.ValidarChaveAleatoria(chave)
 }
-func isTipoChavePixValida(tipoChave domain.TipoChavePix) bool {
+func isTipoChavePixValida(chave string, tipoChave domain.TipoChavePix) bool {
+	switch tipoChave {
+	case domain.Cpf:
+		return validator.ValidarCPF(chave)
+	case domain.Cnpj:
+		return validator.ValidarCNPJ(chave)
+	case domain.Telefone:
+		return validator.ValidarTelefone(chave)
+	case domain.Email:
+		return validator.ValidarEmail(chave)
+	case domain.ChaveAleatoria:
+		return validator.ValidarChaveAleatoria(chave)
+
+	default:
+		return false
+	}
+}
+
+func isTipoValido(tipoChave domain.TipoChavePix) bool {
 	switch tipoChave {
 	case domain.Cpf:
 		return true
@@ -235,6 +297,7 @@ func isTipoChavePixValida(tipoChave domain.TipoChavePix) bool {
 		return true
 	case domain.ChaveAleatoria:
 		return true
+
 	default:
 		return false
 	}

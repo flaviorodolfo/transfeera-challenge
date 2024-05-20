@@ -21,7 +21,7 @@ func ErrorHandler() gin.HandlerFunc {
 			var message string
 
 			switch err {
-			case domain.ErrEmailInvalido, domain.ErrCpfInvalido, domain.ErrCnpjInvalido, domain.ErrNomeInvalido, domain.ErrTipoChaveInvalida, domain.ErrChaveInvalida:
+			case domain.ErrEmailInvalido, domain.ErrCpfInvalido, domain.ErrChaveTipoNaoCorresponde, domain.ErrCnpjInvalido, domain.ErrNomeInvalido, domain.ErrTipoChaveInvalida, domain.ErrChaveInvalida:
 				status = http.StatusBadRequest
 				message = err.Error()
 			case domain.ErrRecebedorNaoEncontrado:
@@ -33,6 +33,11 @@ func ErrorHandler() gin.HandlerFunc {
 			default:
 				status = http.StatusInternalServerError
 				message = "erro interno no servidor"
+				if _, ok := err.(domain.ErrRecebedoresNaoDeletados); ok {
+					status = http.StatusMultiStatus
+					message = err.Error()
+				}
+
 			}
 
 			c.JSON(status, ErrorResponse{
