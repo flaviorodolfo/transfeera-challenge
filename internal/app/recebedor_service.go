@@ -37,10 +37,17 @@ func (s *RecebedorService) CriarRecebedor(recebedor *domain.Recebedor) error {
 	}
 	//normalização do nome do usuário e email e cpf/cnpj
 	normalizarCampos(recebedor)
+	chave, err := s.repo.BuscarChave(recebedor.ChavePix)
+	if err != nil {
+		s.logger.Error("buscando chave recebedor", zap.Error(err), zap.String("chave", recebedor.ChavePix))
+		return err
+	}
+	if chave == recebedor.ChavePix {
+		return domain.ErrChavePixJaCadastrada
+	}
 	//por definição o status do recebedor no cadastro é Rascunho.
 	recebedor.Status = "Rascunho"
-	err := s.repo.CriarRecebedor(recebedor)
-	if err != nil {
+	if err := s.repo.CriarRecebedor(recebedor); err != nil {
 		s.logger.Error("salvando recebedor", zap.Error(err))
 		return err
 	}
@@ -66,6 +73,14 @@ func (s *RecebedorService) EditarRecebedor(recebedor *domain.Recebedor) error {
 	}
 	//normalização do nome do usuário e email e cpf/cnpj
 	normalizarCampos(recebedor)
+	chave, err := s.repo.BuscarChave(recebedor.ChavePix)
+	if err != nil {
+		s.logger.Error("buscando chave recebedor", zap.Error(err), zap.String("chave", recebedor.ChavePix))
+		return err
+	}
+	if chave == recebedor.ChavePix {
+		return domain.ErrChavePixJaCadastrada
+	}
 	if err := s.repo.EditarRecebedor(recebedor); err != nil {
 		s.logger.Error("editando recebedor", zap.Error(err))
 		return err
@@ -130,6 +145,7 @@ func (s *RecebedorService) BuscarRecebedoresPorChave(chave string, pagina int) (
 	if !isChavePixValida(chave) {
 		return nil, domain.ErrChaveInvalida
 	}
+	chave = normalizarChave(chave, getTipoChave(chave))
 	recebedores, err := s.buscarRecebedoresPorCampo(chave, campoChavePix, pagina)
 	if err != nil {
 		s.logger.Error("consulta de recebedores por chave", zap.Error(err))
@@ -163,6 +179,8 @@ func (s *RecebedorService) EditarEmailRecebedor(id uint, email string) error {
 		s.logger.Error("consultando recebedor", zap.Error(err))
 		return err
 	}
+	//normalizacao email
+	email = strings.ToLower(email)
 	err = s.repo.EditarEmailRecebedor(id, email)
 	if err != nil {
 		s.logger.Error("atualizando email recebedor", zap.Error(err))
@@ -180,6 +198,9 @@ func (s *RecebedorService) BuscarRecebedorById(id uint) (*domain.Recebedor, erro
 		s.logger.Error("consultando recebedor", zap.Error(err))
 		return nil, err
 	}
+	if recebedor == nil {
+		return nil, domain.ErrRecebedorNaoEncontrado
+	}
 	return recebedor, nil
 
 }
@@ -193,7 +214,7 @@ func (s *RecebedorService) DeletarRecebedor(id uint) error {
 	err := s.repo.DeletarRecebedor(id)
 	if err != nil {
 		s.logger.Error("deletando recebedor", zap.Error(err))
-		return nil
+		return err
 	}
 	return nil
 
@@ -203,17 +224,19 @@ func (s *RecebedorService) DeletarRecebedor(id uint) error {
 // existam retorna um erro informando quais foram deletados e quais não
 // também retorna erro caso ocorra problema na conexao com o repositorio
 func (s *RecebedorService) DeletarRecebedores(ids []uint) error {
-	var idsSemSucesso []uint
-	var idsComSucesso []uint
+	idsSemSucesso := []uint{}
+	idsComSucesso := []uint{}
+	var hasError bool
 	// para cada tentativa de delete ocorre o registro do que obteve sucesso e do que não
 	for _, id := range ids {
 		if err := s.DeletarRecebedor(id); err != nil {
+			hasError = true
 			idsSemSucesso = append(idsSemSucesso, id)
 		} else {
 			idsComSucesso = append(idsComSucesso, id)
 		}
 	}
-	if idsSemSucesso != nil {
+	if hasError {
 		return domain.ErrRecebedoresNaoDeletados{IdsComSucesso: idsComSucesso, IdsSemSucesso: idsSemSucesso}
 	}
 	//for
@@ -279,12 +302,31 @@ func normalizarCampos(recebedor *domain.Recebedor) {
 	}
 	recebedor.Email = strings.ToLower(recebedor.Email)
 	recebedor.Nome = strings.ToLower(recebedor.Nome)
-	//verifica se a chave é do tipo CPF ou CNPJ e aplica a devida máscara
-	if recebedor.TipoChavePix == domain.Cpf {
-		recebedor.ChavePix = formatarCpf(re.ReplaceAllString(recebedor.ChavePix, ""))
-	} else if recebedor.TipoChavePix == domain.Cnpj {
-		recebedor.ChavePix = formatarCnpj(re.ReplaceAllString(recebedor.ChavePix, ""))
+	recebedor.ChavePix = normalizarChave(recebedor.ChavePix, recebedor.TipoChavePix)
+
+}
+func normalizarChave(chave string, tipo domain.TipoChavePix) string {
+	re := regexp.MustCompile(`[^\d]`)
+	if tipo == domain.Cpf {
+		return formatarCpf(re.ReplaceAllString(chave, ""))
+	} else if tipo == domain.Cnpj {
+		return formatarCnpj(re.ReplaceAllString(chave, ""))
+	} else if tipo == domain.Telefone {
+		return normalizarTelefone(chave)
+	} else if tipo == domain.Email {
+		return strings.ToLower(chave)
 	}
+	return chave
+}
+
+func normalizarTelefone(telefone string) string {
+	//se está com +55...
+	if len(telefone) == 13 {
+		return telefone[3:]
+	} else if len(telefone) == 12 {
+		return telefone[2:]
+	}
+	return telefone
 }
 
 // remove todos não digitos da string e valida o CPF ou CNPJ
@@ -328,6 +370,23 @@ func isTipoChavePixValida(chave string, tipoChave domain.TipoChavePix) bool {
 
 	default:
 		return false
+	}
+}
+
+// retorna true se a chave é valida pra o tipo de chave pix
+func getTipoChave(chave string) domain.TipoChavePix {
+	switch {
+	case validator.ValidarCPF(chave):
+		return domain.Cpf
+	case validator.ValidarCNPJ(chave):
+		return domain.Cnpj
+	case validator.ValidarTelefone(chave):
+		return domain.Telefone
+	case validator.ValidarEmail(chave):
+		return domain.Email
+
+	default:
+		return domain.ChaveAleatoria
 	}
 }
 
