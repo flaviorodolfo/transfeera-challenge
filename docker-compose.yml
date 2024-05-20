@@ -28,7 +28,7 @@ services:
       - "${DATABASE_PORT}:${DATABASE_PORT}"    
     volumes:
       - db-data:/var/lib/postgressql 
-      - ./init-scripts:/docker-entrypoint-initdb.d
+      - ./scripts:/docker-entrypoint-initdb.d
     networks:
       - backend
 
