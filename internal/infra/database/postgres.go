@@ -33,11 +33,25 @@ func (r *postgresRecebedorRepository) BuscarRecebedorPorId(id uint) (*domain.Rec
 	err := r.DB.QueryRow(query, id).Scan(&recebedor.Id, &recebedor.CpfCnpj, &recebedor.Nome, &recebedor.TipoChavePix, &recebedor.ChavePix, &recebedor.Status, &recebedor.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, domain.ErrRecebedorNaoEncontrado
+			return nil, nil
 		}
 		return nil, err
 	}
 	return &recebedor, nil
+}
+
+func (r *postgresRecebedorRepository) BuscarChave(chave string) (string, error) {
+	query := "SELECT chave_pix FROM pagamento.recebedores WHERE chave_pix = $1"
+	var result string
+
+	err := r.DB.QueryRow(query, chave).Scan(&result)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
+		return "", err
+	}
+	return result, nil
 }
 
 func (r *postgresRecebedorRepository) ContarRecebedoresPorCampo(valor, nomeCampo string) (int, error) {
@@ -59,6 +73,7 @@ func (r *postgresRecebedorRepository) DeletarRecebedor(id uint) error {
 	return nil
 }
 
+// Deprecated: não utilizar
 func (r *postgresRecebedorRepository) DeletarRecebedores(ids []uint) error {
 
 	tx, err := r.DB.Begin()
@@ -92,9 +107,6 @@ func (r *postgresRecebedorRepository) BuscarRecebedoresPorCampo(valor, nomeCampo
 	query := fmt.Sprintf("SELECT recebedor_id,cpf_cnpj, nome, tipo_chave_pix, chave_pix, status_recebedor, email FROM pagamento.recebedores WHERE %s = $1 LIMIT 10 OFFSET $2", nomeCampo)
 	rows, err := r.DB.Query(query, valor, offset)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, domain.ErrRecebedorNaoEncontrado
-		}
 		return nil, err
 	}
 	recebedores := []*domain.Recebedor{}

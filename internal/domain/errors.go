@@ -23,5 +23,6 @@ var (
 	ErrCpfInvalido               = errors.New("cpf inválido")
 	ErrCnpjInvalido              = errors.New("cnpj inválido")
 	ErrRecebedorNaoEncontrado    = errors.New("recebedor não existe")
-	ErrRecebedorNaoPermiteEdicao = errors.New("recebedor com status Validado apenas permite edicao de email")
+	ErrRecebedorNaoPermiteEdicao = errors.New("recebedor com status Validado apenas permite edição de email")
+	ErrChavePixJaCadastrada      = errors.New("chave pix já cadastrada")
 )

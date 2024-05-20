@@ -9,4 +9,5 @@ type RecebedorRepository interface {
 	EditarEmailRecebedor(id uint, email string) error
 	DeletarRecebedores(ids []uint) error
 	DeletarRecebedor(id uint) error
+	BuscarChave(chave string) (string, error)
 }
