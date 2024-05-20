@@ -113,7 +113,7 @@ func (h *RecebedorHandler) BuscarRecebedorPorId(c *gin.Context) {
 	var id = uint(idTmp)
 	recebedor, err := h.service.BuscarRecebedorById(id)
 	if err != nil {
-		h.logger.Error("consultando recebedor", zap.Error(err))
+		h.logger.Error("consultando recebedor por id", zap.Error(err))
 		c.Error(err)
 		return
 	}
@@ -167,7 +167,7 @@ func (h *RecebedorHandler) BuscarRecebedorPorNome(c *gin.Context) {
 	}
 	recebedor, err := h.service.BuscarRecebedoresPorNome(nome, pagina)
 	if err != nil {
-		h.logger.Error("consultando recebedor", zap.Error(err))
+		h.logger.Error("consultando recebedor por nome", zap.Error(err))
 		c.Error(err)
 		return
 	}
@@ -199,7 +199,7 @@ func (h *RecebedorHandler) BuscarRecebedorPorChave(c *gin.Context) {
 	}
 	recebedores, err := h.service.BuscarRecebedoresPorChave(chave, pagina)
 	if err != nil {
-		h.logger.Error("consultando recebedor", zap.Error(err))
+		h.logger.Error("consultando recebedor por chave", zap.Error(err))
 		c.Error(err)
 		return
 	}
@@ -215,7 +215,7 @@ func (h *RecebedorHandler) BuscarRecebedorPorTipoChave(c *gin.Context) {
 	}
 	recebedores, err := h.service.BuscarRecebedoresPorTipoChavePix(tipoChave, pagina)
 	if err != nil {
-		h.logger.Error("consultando recebedor", zap.Error(err))
+		h.logger.Error("consultando recebedor por tipo chave", zap.Error(err))
 		c.Error(err)
 		return
 	}
