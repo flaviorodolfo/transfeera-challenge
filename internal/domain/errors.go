@@ -6,8 +6,8 @@ import (
 )
 
 type ErrRecebedoresNaoDeletados struct {
-	IdsSemSucesso []uint
-	IdsComSucesso []uint
+	IdsSemSucesso []uint `json:"ids_sem_sucesso"`
+	IdsComSucesso []uint `json:"ids_com_sucesso"`
 }
 
 func (e ErrRecebedoresNaoDeletados) Error() string {
@@ -15,11 +15,10 @@ func (e ErrRecebedoresNaoDeletados) Error() string {
 }
 
 var (
-	ErrEmailInvalido     = errors.New("email inválido")
-	ErrNomeInvalido      = errors.New("nome inválido")
-	ErrChaveInvalida     = errors.New("formato de chave inexistente")
-	ErrTipoChaveInvalida = errors.New("tipo de chave inválida")
-	//ErrRecebedoresNaoDeletados   = errors.New("recebedores não deletados: %s")
+	ErrEmailInvalido             = errors.New("email inválido")
+	ErrNomeInvalido              = errors.New("nome inválido")
+	ErrChaveInvalida             = errors.New("formato de chave inexistente")
+	ErrTipoChaveInvalida         = errors.New("tipo de chave inválida")
 	ErrChaveTipoNaoCorresponde   = errors.New("chave não corresponde com o tipo")
 	ErrCpfInvalido               = errors.New("cpf inválido")
 	ErrCnpjInvalido              = errors.New("cnpj inválido")
