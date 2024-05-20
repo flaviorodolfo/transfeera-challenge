@@ -99,6 +99,7 @@ func (h *RecebedorHandler) EditarEmailRecebedor(c *gin.Context) {
 	}
 	c.Status(http.StatusCreated)
 }
+
 func (h *RecebedorHandler) BuscarRecebedorPorId(c *gin.Context) {
 	idStr := c.Param("id")
 	idTmp, err := strconv.Atoi(idStr)
@@ -118,6 +119,7 @@ func (h *RecebedorHandler) BuscarRecebedorPorId(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, recebedor)
 }
+
 func (h *RecebedorHandler) DeletarRecebedor(c *gin.Context) {
 	idStr := c.Param("id")
 	idTmp, err := strconv.Atoi(idStr)
