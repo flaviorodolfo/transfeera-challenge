@@ -4,7 +4,7 @@ Este projeto foi desenvolvido como parte do desafio proposto pela Transfeera.
 
 ## Instruções de Execução
 
-Para executar este projeto localmente, você pode utilizar o Docker Compose. Certifique-se de ter o Docker e siga os passos abaixo:
+Para executar este projeto localmente certifique-se de ter o Docker e siga os passos abaixo:
 
 1. Clone este repositório para o seu ambiente local.
 2. Navegue até o diretório do projeto.
@@ -32,7 +32,6 @@ Para utilizar a API Transfeera Challenge, siga estas instruções:
 2. Agora você pode utilizar os endpoints disponíveis na coleção para interagir com a API
 
 ### Endpoints da aplicação
-Claro! Aqui estão os endpoints disponíveis na API Transfeera Challenge:
 
 - **GET /api/v1/recebedores/id/:id**: Retorna um recebedor com o ID especificado.
 - **GET /api/v1/recebedores/nome/:nome**: Retorna os recebedores com o nome especificado.
