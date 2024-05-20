@@ -191,7 +191,8 @@ func (h *RecebedorHandler) BuscarRecebedorPorStatus(c *gin.Context) {
 }
 
 func (h *RecebedorHandler) BuscarRecebedorPorChave(c *gin.Context) {
-	chave := c.Param("chave")
+	//chave := c.Param("chave")
+	chave := c.Query("chave")
 	pagina, err := strconv.Atoi(c.DefaultQuery("pagina", "1"))
 	if err != nil || pagina < 1 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Parâmetro de página inválido"})
