@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/flaviorodolfo/transfeera-challenge/internal/domain"
@@ -9,6 +10,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// erro generico inesperado na consulta ao rep
+var errDatabaseError = errors.New("Erro inesperado ao consultar o repositorio")
+
 type MockRepository struct {
 	mock.Mock
 }
@@ -16,6 +20,13 @@ type MockRepository struct {
 func (m *MockRepository) CriarRecebedor(recebedor *domain.Recebedor) error {
 	args := m.Called(recebedor)
 	return args.Error(0)
+}
+func (m *MockRepository) BuscarChave(chave string) (string, error) {
+	args := m.Called(chave)
+	if args.Get(0) == nil {
+		return "", args.Error(1)
+	}
+	return args.Get(0).(string), args.Error(1)
 }
 func (m *MockRepository) EditarEmailRecebedor(id uint, email string) error {
 	args := m.Called(id, email)
@@ -81,6 +92,29 @@ func TestDeletarRecebedores_Success(t *testing.T) {
 	repo.On("DeletarRecebedor", uint(4)).Return(nil)
 	err := svc.DeletarRecebedores(ids)
 	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+func TestDeletarRecebedores_SuccessoParcial(t *testing.T) {
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	ids := []uint{1, 2, 3, 4}
+	recebedor := &domain.Recebedor{
+		Id:           1,
+		CpfCnpj:      "515.762.030-69",
+		Nome:         "João da Silva",
+		TipoChavePix: "EMAIL",
+		ChavePix:     "flavio@transfeera.com",
+	}
+	var mockError = domain.ErrRecebedoresNaoDeletados{IdsComSucesso: []uint{1, 2}, IdsSemSucesso: []uint{3, 4}}
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
+	repo.On("BuscarRecebedorPorId", uint(2)).Return(recebedor, nil)
+	repo.On("BuscarRecebedorPorId", uint(3)).Return(nil, nil)
+	repo.On("BuscarRecebedorPorId", uint(4)).Return(nil, nil)
+	repo.On("DeletarRecebedor", uint(1)).Return(nil)
+	repo.On("DeletarRecebedor", uint(2)).Return(nil)
+	err := svc.DeletarRecebedores(ids)
+	assert.Error(t, err)
+	assert.Equal(t, mockError, err)
 	repo.AssertExpectations(t)
 }
 
@@ -216,6 +250,125 @@ func TestBuscarRecebedorPorChave_Success(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
+func TestBuscarRecebedorPorChave_ErroConsultaRecebedores(t *testing.T) {
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+
+	valorCampo := "71.246.868/0001-14"
+	nomeCampo := "chave_pix"
+	paginacao := 1
+	repo.On("ContarRecebedoresPorCampo", valorCampo, nomeCampo).Return(2, nil)
+	repo.On("BuscarRecebedoresPorCampo", valorCampo, nomeCampo, 0).Return(nil, errDatabaseError)
+
+	_, err := svc.BuscarRecebedoresPorChave(valorCampo, paginacao)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+func TestBuscarRecebedorPorChave_ErroConsultaQuantidadeRecebedores(t *testing.T) {
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	valorCampo := "71.246.868/0001-14"
+	nomeCampo := "chave_pix"
+	paginacao := 1
+	repo.On("ContarRecebedoresPorCampo", valorCampo, nomeCampo).Return(0, errDatabaseError)
+	//repo.On("BuscarRecebedoresPorCampo", valorCampo, nomeCampo, 0).Return(recebedores, nil)
+
+	_, err := svc.BuscarRecebedoresPorChave(valorCampo, paginacao)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+func TestBuscarRecebedorPorNome_ErroConsultaRecebedores(t *testing.T) {
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+
+	valorCampo := "flávio rodolfo"
+	nomeCampo := "nome"
+	paginacao := 1
+	repo.On("ContarRecebedoresPorCampo", valorCampo, nomeCampo).Return(2, nil)
+	repo.On("BuscarRecebedoresPorCampo", valorCampo, nomeCampo, 0).Return(nil, errDatabaseError)
+
+	_, err := svc.BuscarRecebedoresPorNome(valorCampo, paginacao)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+func TestBuscarRecebedorPorNome_ErroConsultaQuantidadeRecebedores(t *testing.T) {
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	valorCampo := "teste"
+	nomeCampo := "nome"
+	paginacao := 1
+	repo.On("ContarRecebedoresPorCampo", valorCampo, nomeCampo).Return(2, errDatabaseError)
+	//repo.On("BuscarRecebedoresPorCampo", valorCampo, nomeCampo, 0).Return(recebedores, nil)
+
+	_, err := svc.BuscarRecebedoresPorNome(valorCampo, paginacao)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+
+func TestBuscarRecebedorPorStatus_ErroConsultaRecebedores(t *testing.T) {
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+
+	valorCampo := "Rascunho"
+	nomeCampo := "status_recebedor"
+	paginacao := 1
+	repo.On("ContarRecebedoresPorCampo", valorCampo, nomeCampo).Return(2, nil)
+	repo.On("BuscarRecebedoresPorCampo", valorCampo, nomeCampo, 0).Return(nil, errDatabaseError)
+
+	_, err := svc.BuscarRecebedoresPorStatus(valorCampo, paginacao)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+func TestBuscarRecebedorPorStatus_ErroConsultaQuantidadeRecebedores(t *testing.T) {
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	valorCampo := "Rascunho"
+	nomeCampo := "status_recebedor"
+	paginacao := 1
+	repo.On("ContarRecebedoresPorCampo", valorCampo, nomeCampo).Return(2, errDatabaseError)
+	//repo.On("BuscarRecebedoresPorCampo", valorCampo, nomeCampo, 0).Return(recebedores, nil)
+
+	_, err := svc.BuscarRecebedoresPorStatus(valorCampo, paginacao)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+
+func TestBuscarRecebedorPorTipoChave_ErroConsultaRecebedores(t *testing.T) {
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+
+	valorCampo := "CHAVE_ALEATORIA"
+	nomeCampo := "tipo_chave_pix"
+	paginacao := 1
+	repo.On("ContarRecebedoresPorCampo", valorCampo, nomeCampo).Return(2, nil)
+	repo.On("BuscarRecebedoresPorCampo", valorCampo, nomeCampo, 0).Return(nil, errDatabaseError)
+
+	_, err := svc.BuscarRecebedoresPorTipoChavePix(valorCampo, paginacao)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+func TestBuscarRecebedorPorTipoChave_ErroConsultaQuantidadeRecebedores(t *testing.T) {
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	valorCampo := "CPF"
+	nomeCampo := "tipo_chave_pix"
+	paginacao := 1
+	repo.On("ContarRecebedoresPorCampo", valorCampo, nomeCampo).Return(2, errDatabaseError)
+	//repo.On("BuscarRecebedoresPorCampo", valorCampo, nomeCampo, 0).Return(recebedores, nil)
+
+	_, err := svc.BuscarRecebedoresPorTipoChavePix(valorCampo, paginacao)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+
 func TestBuscarRecebedorPorChave_ChaveInvalida(t *testing.T) {
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
@@ -225,6 +378,7 @@ func TestBuscarRecebedorPorChave_ChaveInvalida(t *testing.T) {
 	_, err := svc.BuscarRecebedoresPorChave(valorCampo, paginacao)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrChaveInvalida, err)
+	repo.AssertExpectations(t)
 }
 
 func TestBuscarRecebedorPorTipoChave_Success(t *testing.T) {
@@ -269,6 +423,7 @@ func TestBuscarRecebedorPorTipoChave_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, esperado, response)
 	repo.AssertExpectations(t)
+	repo.AssertExpectations(t)
 }
 func TestBuscarRecebedorPorTipo_TipoInvalido(t *testing.T) {
 	repo := new(MockRepository)
@@ -284,7 +439,7 @@ func TestBuscarRecebedorPorTipo_TipoInvalido(t *testing.T) {
 func TestBuscarRecebedor_NaoEncontrado(t *testing.T) {
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
-	repo.On("BuscarRecebedorPorId", uint(2)).Return(nil, domain.ErrRecebedorNaoEncontrado)
+	repo.On("BuscarRecebedorPorId", uint(2)).Return(nil, nil)
 	recebedor, err := svc.BuscarRecebedorById(uint(2))
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrRecebedorNaoEncontrado, err)
@@ -308,6 +463,36 @@ func TestDeletarRecebedor_Success(t *testing.T) {
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
 }
+
+func TestDeletarRecebedor_ErroAcessoDeleteRecebedor(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	recebedor := &domain.Recebedor{
+		Id:           1,
+		CpfCnpj:      "515.762.030-69",
+		Nome:         "João da Silva",
+		TipoChavePix: "EMAIL",
+		ChavePix:     "flavio@transfeera.com",
+	}
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
+	repo.On("DeletarRecebedor", uint(1)).Return(errDatabaseError)
+	err := svc.DeletarRecebedor(uint(1))
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+func TestDeletarRecebedor_ErroAcessoBuscaRecebedor(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(nil, errDatabaseError)
+	err := svc.DeletarRecebedor(uint(1))
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
 func TestEditarRecebedor_Success(t *testing.T) {
 
 	repo := new(MockRepository)
@@ -321,11 +506,88 @@ func TestEditarRecebedor_Success(t *testing.T) {
 	}
 	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
 	repo.On("EditarRecebedor", recebedor).Return(nil)
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", nil)
 	err := svc.EditarRecebedor(recebedor)
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
 }
 
+func TestEditarRecebedor_ErroBuscarChave(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	recebedor := &domain.Recebedor{
+		Id:           1,
+		CpfCnpj:      "515.762.030-69",
+		Nome:         "João da Silva",
+		TipoChavePix: "EMAIL",
+		ChavePix:     "flavio@transfeera.com",
+	}
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", errDatabaseError)
+
+	err := svc.EditarRecebedor(recebedor)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+func TestEditarRecebedor_ErroBuscarRecebedor(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	recebedor := &domain.Recebedor{
+		Id:           1,
+		CpfCnpj:      "515.762.030-69",
+		Nome:         "João da Silva",
+		TipoChavePix: "EMAIL",
+		ChavePix:     "flavio@transfeera.com",
+	}
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(nil, errDatabaseError)
+
+	err := svc.EditarRecebedor(recebedor)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+func TestEditarRecebedor_ErroAcessoEditarRecebedor(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	recebedor := &domain.Recebedor{
+		Id:           1,
+		CpfCnpj:      "515.762.030-69",
+		Nome:         "João da Silva",
+		TipoChavePix: "EMAIL",
+		ChavePix:     "flavio@transfeera.com",
+	}
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", nil)
+	repo.On("EditarRecebedor", recebedor).Return(errDatabaseError)
+
+	err := svc.EditarRecebedor(recebedor)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+
+func TestEditarRecebedor_ChaveJaCadastrada(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	recebedor := &domain.Recebedor{
+		Id:           1,
+		CpfCnpj:      "515.762.030-69",
+		Nome:         "João da Silva",
+		TipoChavePix: "EMAIL",
+		ChavePix:     "flavio@transfeera.com",
+	}
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
+	repo.On("BuscarChave", recebedor.ChavePix).Return(recebedor.ChavePix, nil)
+	err := svc.EditarRecebedor(recebedor)
+	assert.Error(t, err)
+	assert.Equal(t, domain.ErrChavePixJaCadastrada, err)
+	repo.AssertExpectations(t)
+}
 func TestEditarRecebedor_NomeInvalido(t *testing.T) {
 
 	repo := new(MockRepository)
@@ -338,10 +600,10 @@ func TestEditarRecebedor_NomeInvalido(t *testing.T) {
 		ChavePix:     "flavio@transfeera.com",
 	}
 	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
-	repo.On("EditarRecebedor", recebedor).Return(nil)
 	err := svc.EditarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrNomeInvalido, err)
+	repo.AssertExpectations(t)
 
 }
 func TestEditarEmailRecebedor_Success(t *testing.T) {
@@ -366,19 +628,23 @@ func TestEditarEmailRecebedor_EmailInvalido(t *testing.T) {
 
 	repo := new(MockRepository)
 	svc := &RecebedorService{repo: repo, logger: mockLogger()}
-	recebedor := &domain.Recebedor{
-		Id:           1,
-		CpfCnpj:      "515.762.030-69",
-		Nome:         "João da Silva",
-		TipoChavePix: "EMAIL",
-		ChavePix:     "flavio@transfeera.com",
-	}
 	email := "flavio@teste"
-	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
-	repo.On("EditarEmailRecebedor", uint(1), email).Return(nil)
 	err := svc.EditarEmailRecebedor(uint(1), email)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrEmailInvalido, err)
+	repo.AssertExpectations(t)
+}
+func TestEditarEmailRecebedor_ErroAcessoBuscaRecebedor(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+
+	email := "flavio@teste.com"
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(nil, errDatabaseError)
+	err := svc.EditarEmailRecebedor(uint(1), email)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
 }
 func TestEditarEmailRecebedor_RecebedorNaoEncontrado(t *testing.T) {
 
@@ -392,11 +658,12 @@ func TestEditarEmailRecebedor_RecebedorNaoEncontrado(t *testing.T) {
 		ChavePix:     "flavio@transfeera.com",
 	}
 	email := "flavio@teste.com"
-	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, domain.ErrRecebedorNaoEncontrado)
-	repo.On("EditarEmailRecebedor", uint(1), email).Return(nil)
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
+	repo.On("EditarEmailRecebedor", recebedor.Id, email).Return(errDatabaseError)
 	err := svc.EditarEmailRecebedor(uint(1), email)
 	assert.Error(t, err)
-	assert.Equal(t, domain.ErrRecebedorNaoEncontrado, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
 }
 
 func TestEditarRecebedor_CpfInvalido(t *testing.T) {
@@ -411,10 +678,10 @@ func TestEditarRecebedor_CpfInvalido(t *testing.T) {
 		ChavePix:     "flavio@transfeera.com",
 	}
 	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
-	repo.On("EditarRecebedor", recebedor).Return(nil)
 	err := svc.EditarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrCpfInvalido, err)
+	repo.AssertExpectations(t)
 }
 func TestEditarRecebedor_RecebedorNaoEncontrado(t *testing.T) {
 
@@ -427,11 +694,11 @@ func TestEditarRecebedor_RecebedorNaoEncontrado(t *testing.T) {
 		TipoChavePix: "EMAIL",
 		ChavePix:     "flavio@transfeera.com",
 	}
-	repo.On("BuscarRecebedorPorId", uint(1)).Return(nil, domain.ErrRecebedorNaoEncontrado)
-	repo.On("EditarRecebedor", recebedor).Return(domain.ErrRecebedorNaoEncontrado)
+	repo.On("BuscarRecebedorPorId", uint(1)).Return(nil, nil)
 	err := svc.EditarRecebedor(recebedor)
 	assert.Error(t, domain.ErrRecebedorNaoEncontrado)
 	assert.Equal(t, domain.ErrRecebedorNaoEncontrado, err)
+	repo.AssertExpectations(t)
 }
 
 func TestEditarRecebedor_RecebedorNaoPermiteEdicao(t *testing.T) {
@@ -447,10 +714,10 @@ func TestEditarRecebedor_RecebedorNaoPermiteEdicao(t *testing.T) {
 		Status:       "Validado",
 	}
 	repo.On("BuscarRecebedorPorId", uint(1)).Return(recebedor, nil)
-	repo.On("EditarRecebedor", recebedor).Return(nil)
 	err := svc.EditarRecebedor(recebedor)
 	assert.Error(t, domain.ErrRecebedorNaoPermiteEdicao)
 	assert.Equal(t, domain.ErrRecebedorNaoPermiteEdicao, err)
+	repo.AssertExpectations(t)
 }
 
 func TestCreateRecebedor_SuccessoChaveCpf(t *testing.T) {
@@ -466,8 +733,66 @@ func TestCreateRecebedor_SuccessoChaveCpf(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestCreateRecebedor_ErroBuscaChave(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	recebedor := &domain.Recebedor{
+		Id:           1,
+		CpfCnpj:      "515.762.030-69",
+		Nome:         "João da Silva",
+		TipoChavePix: "CPF",
+		ChavePix:     "515.762.030-69",
+	}
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", nil)
+	repo.On("CriarRecebedor", recebedor).Return(errDatabaseError)
+
+	err := svc.CriarRecebedor(recebedor)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+
+func TestCreateRecebedor_ErroCriarRecebedor(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	recebedor := &domain.Recebedor{
+		Id:           1,
+		CpfCnpj:      "515.762.030-69",
+		Nome:         "João da Silva",
+		TipoChavePix: "CPF",
+		ChavePix:     "515.762.030-69",
+	}
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", errDatabaseError)
+
+	err := svc.CriarRecebedor(recebedor)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseError, err)
+	repo.AssertExpectations(t)
+}
+func TestCreateRecebedor_ChaveJaCadastrada(t *testing.T) {
+
+	repo := new(MockRepository)
+	svc := &RecebedorService{repo: repo, logger: mockLogger()}
+	recebedor := &domain.Recebedor{
+		Id:           1,
+		CpfCnpj:      "515.762.030-69",
+		Nome:         "João da Silva",
+		TipoChavePix: "CPF",
+		ChavePix:     "515.762.030-69",
+	}
+
+	repo.On("BuscarChave", recebedor.ChavePix).Return(recebedor.ChavePix, nil)
+	err := svc.CriarRecebedor(recebedor)
+	assert.Error(t, err)
+	assert.Equal(t, domain.ErrChavePixJaCadastrada, err)
 	repo.AssertExpectations(t)
 }
 
@@ -484,8 +809,10 @@ func TestCreateRecebedor_SuccessoChaveAleatoria(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.NoError(t, err)
+	repo.AssertExpectations(t)
 	repo.AssertExpectations(t)
 }
 
@@ -498,10 +825,11 @@ func TestCreateRecebedor_SuccessoCnpj(t *testing.T) {
 		CpfCnpj:      "41.916.896/0001-30",
 		Nome:         "João da Silva",
 		TipoChavePix: "TELEFONE",
-		ChavePix:     "5579998765676",
+		ChavePix:     "79998765676",
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
@@ -519,6 +847,7 @@ func TestCreateRecebedor_Success(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
@@ -537,6 +866,7 @@ func TestCreateRecebedor_SuccessChaveCnpj(t *testing.T) {
 	}
 
 	repo.On("CriarRecebedor", recebedor).Return(nil)
+	repo.On("BuscarChave", recebedor.ChavePix).Return("", nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
@@ -555,10 +885,10 @@ func TestCreateRecebedor_EmailInvalido(t *testing.T) {
 		Email:        "joao@example",
 	}
 
-	repo.On("CriarRecebedor", recebedor).Return(nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrEmailInvalido, err)
+	repo.AssertExpectations(t)
 
 }
 
@@ -574,11 +904,10 @@ func TestCreateRecebedor_ChaveETipoNaoCorresponde(t *testing.T) {
 		ChavePix:     "515.762.030-69",
 		Email:        "joao@example.com",
 	}
-
-	repo.On("CriarRecebedor", recebedor).Return(nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrChaveTipoNaoCorresponde, err)
+	repo.AssertExpectations(t)
 
 }
 
@@ -594,11 +923,10 @@ func TestCreateRecebedor_TipoChaveInvalida(t *testing.T) {
 		ChavePix:     "515.762.030-69",
 		Email:        "joao@example.com",
 	}
-
-	repo.On("CriarRecebedor", recebedor).Return(nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrTipoChaveInvalida, err)
+	repo.AssertExpectations(t)
 
 }
 func TestCreateRecebedor_CnpjInvalido(t *testing.T) {
@@ -613,11 +941,10 @@ func TestCreateRecebedor_CnpjInvalido(t *testing.T) {
 		ChavePix:     "799965474828",
 		Email:        "joao@example.com",
 	}
-
-	repo.On("CriarRecebedor", recebedor).Return(nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrCnpjInvalido, err)
+	repo.AssertExpectations(t)
 
 }
 func TestCreateRecebedor_ChavePixInvalida(t *testing.T) {
@@ -633,10 +960,10 @@ func TestCreateRecebedor_ChavePixInvalida(t *testing.T) {
 		Email:        "joao@example.com",
 	}
 
-	repo.On("CriarRecebedor", recebedor).Return(nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrChaveInvalida, err)
+	repo.AssertExpectations(t)
 
 }
 
@@ -652,11 +979,10 @@ func TestCreateRecebedor_CpfInvalido(t *testing.T) {
 		ChavePix:     "799965474828",
 		Email:        "joao@example.com",
 	}
-
-	repo.On("CriarRecebedor", recebedor).Return(nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrCpfInvalido, err)
+	repo.AssertExpectations(t)
 
 }
 func TestCreateRecebedor_TipoChaveTelefoneInvalida(t *testing.T) {
@@ -672,10 +998,10 @@ func TestCreateRecebedor_TipoChaveTelefoneInvalida(t *testing.T) {
 		Email:        "joao@example.com",
 	}
 
-	repo.On("CriarRecebedor", recebedor).Return(nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrChaveInvalida, err)
+	repo.AssertExpectations(t)
 
 }
 
@@ -692,10 +1018,10 @@ func TestCreateRecebedor_TipoChaveAleatoriaInvalida(t *testing.T) {
 		Email:        "joao@example.com",
 	}
 
-	repo.On("CriarRecebedor", recebedor).Return(nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrChaveInvalida, err)
+	repo.AssertExpectations(t)
 
 }
 
@@ -711,10 +1037,9 @@ func TestCreateRecebedor_TipoChaveCnpjInvalida(t *testing.T) {
 		ChavePix:     "0f1488da7",
 		Email:        "joao@example.com",
 	}
-
-	repo.On("CriarRecebedor", recebedor).Return(nil)
 	err := svc.CriarRecebedor(recebedor)
 	assert.Error(t, err)
 	assert.Equal(t, domain.ErrChaveInvalida, err)
+	repo.AssertExpectations(t)
 
 }
