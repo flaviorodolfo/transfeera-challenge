@@ -20,7 +20,7 @@ Para testar este projeto, siga estas instruções:
 2. Navegue até o diretório do projeto.
 3. Execute os testes utilizando o comando
 ```
-go test ./....
+go test ./...
 ```
 
 ## Utilizando a api
