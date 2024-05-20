@@ -39,7 +39,7 @@ Após a inicialização do docker via docker compose a API estará disponível L
 - **GET /api/v1/recebedores/id/:id**: Retorna um recebedor com o ID especificado.
 - **GET /api/v1/recebedores/nome/:nome**: Retorna os recebedores com o nome especificado.
 - **GET /api/v1/recebedores/status/:status**: Retorna os recebedores com o status especificado.
-- **GET /api/v1/recebedores/chave/:chave**: Retorna os recebedores com a chave especificada.
+- **GET /api/v1/recebedores/chave?chave={$chave}&pagina={$pagina}**: Retorna os recebedores com a chave especificada.
 - **GET /api/v1/recebedores/tipoChave/:tipoChave**: Retorna os recebedores com o tipo de chave especificado.
 - **POST /api/v1/recebedores**: Cria um novo recebedor.
 - **PATCH /api/v1/recebedores**: Edita um recebedor existente.
