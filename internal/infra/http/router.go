@@ -15,7 +15,7 @@ func NewRouter(service *app.RecebedorService, logger *zap.Logger) *gin.Engine {
 		v1.GET("/recebedores/id/:id", handler.BuscarRecebedorPorId)
 		v1.GET("/recebedores/nome/:nome", handler.BuscarRecebedorPorNome)
 		v1.GET("/recebedores/status/:status", handler.BuscarRecebedorPorStatus)
-		v1.GET("/recebedores/chave/:chave", handler.BuscarRecebedorPorChave)
+		v1.GET("/recebedores/chave", handler.BuscarRecebedorPorChave)
 		v1.GET("/recebedores/tipoChave/:tipoChave", handler.BuscarRecebedorPorTipoChave)
 		v1.POST("/recebedores", handler.CriarRecebedor)
 		v1.PATCH("/recebedores", handler.EditarRecebedor)
