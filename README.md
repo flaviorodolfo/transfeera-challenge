@@ -32,7 +32,10 @@ Para utilizar a API Transfeera Challenge, siga estas instruções:
 2. Agora você pode utilizar os endpoints disponíveis na coleção para interagir com a API
 
 ### Endpoints da aplicação
-
+Após a inicialização do docker via docker compose a API estará disponível LOCALMENTE em:
+```
+ http://localhost:8080/api/v1/recebedores
+```
 - **GET /api/v1/recebedores/id/:id**: Retorna um recebedor com o ID especificado.
 - **GET /api/v1/recebedores/nome/:nome**: Retorna os recebedores com o nome especificado.
 - **GET /api/v1/recebedores/status/:status**: Retorna os recebedores com o status especificado.
