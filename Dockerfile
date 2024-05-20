@@ -7,6 +7,7 @@ RUN go mod download
 
 COPY . .
 
+RUN go test ./...
 # Construção estática
 RUN CGO_ENABLED=0 GOOS=linux go build -o /go/bin/api ./cmd/
 
